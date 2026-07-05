@@ -42,6 +42,7 @@ class Game:
         grafo = MapaGrafo.crear_grafo(terreno)
         self.tilemap = TileMap(terreno, grafo)
         self.renderer = Renderizador(self.screen, self.tileset)
+        self.renderer.generar_fondo(self.tilemap)
 
         # Spawn jugador
 
@@ -94,6 +95,6 @@ class Game:
 
             # Render
 
-            self.renderer.render(self.tilemap, self.player, self.npc)
+            self.renderer.render(self.player, self.npc)
             pygame.display.flip()
         pygame.quit()
