@@ -1,4 +1,5 @@
 import pygame
+import random
 
 from principal.configuraciones import *
 from principal.colores import *
@@ -22,6 +23,7 @@ class Game:
     def __init__(self):
 
         pygame.init()
+        self.game_over = False
 
         self.screen = pygame.display.set_mode((ANCHO_BASE, ALTO_BASE), pygame.RESIZABLE)
 
@@ -31,10 +33,8 @@ class Game:
 
         # Tiles
         self.tileset = TileSet()
-        self.player_sprite = pygame.Surface((24, 24))
-        self.player_sprite.fill(AZUL)
-        self.npc_sprite = pygame.Surface((24, 24))
-        self.npc_sprite.fill(ROJO)
+        self.player_sprite = self.tileset.jugador
+        self.npc_sprite = self.tileset.enemigo
 
         # Mundo
         generator = CelulasMapa()
@@ -55,15 +55,34 @@ class Game:
             if self.player:
                 break
 
-        # Spawn NPC
-        self.npc = None
-        for y in range(ALTO - 1, -1, -1):
-            for x in range(ANCHO - 1, -1, -1):
-                if self.tilemap.es_caminable(x, y):
-                    self.npc = NPC(x, y, self.npc_sprite)
+        # Spawn NPCs
+
+        self.npcs = []
+        DISTANCIA_MINIMA = 10
+        while len(self.npcs) < CANTIDAD_NPC:
+
+            x = random.randint(0, ANCHO - 1)
+            y = random.randint(0, ALTO - 1)
+
+            if not self.tilemap.es_caminable(x, y):
+                continue
+
+            distancia = abs(x - self.player.x) + abs(y - self.player.y)
+
+            if distancia < DISTANCIA_MINIMA:
+                continue
+
+            valido = True
+
+            for npc in self.npcs:
+                distancia = abs(x - npc.x) + abs(y - npc.y)
+                if distancia < DISTANCIA_MINIMA:
+                    valido = False
                     break
-            if self.npc:
-                break
+
+            if valido:
+                self.npcs.append(NPC(x, y, self.npc_sprite))
+        
 
     def run(self):
 
@@ -88,13 +107,31 @@ class Game:
                     
                     else:
                         self.player.ruta = []
+                if self.game_over:
 
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+
+                        mx, my = pygame.mouse.get_pos()
+                        sx = self.screen.get_width() / ANCHO_BASE
+                        sy = self.screen.get_height() / ALTO_BASE
+                        mx /= sx
+                        my /= sy
+
+                        if self.renderer.boton_ok.collidepoint(mx, my):
+                            running = False
+
+                    continue
             # Update
             self.player.actualizar(dt)
-            self.npc.update(dt, self.player, self.tilemap)
+            for npc in self.npcs:
+                npc.update(dt, self.player, self.tilemap)
+            
+            for npc in self.npcs:
+                if npc.posicion == self.player.posicion:
+                    self.game_over = True
 
             # Render
 
-            self.renderer.render(self.player, self.npc)
+            self.renderer.render(self.player, self.npcs, self.game_over)
             pygame.display.flip()
         pygame.quit()
